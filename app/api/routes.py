@@ -6,10 +6,13 @@ from app.schemas.evaluation import (
     CompareResponse,
     EvalGateRequest,
     EvalGateResponse,
+    MetricsResponse,
+    ModelComparisonResponse,
     RunEvalRequest,
     RunEvalResponse,
 )
 from app.services.alerts import AlertService
+from app.services.analytics import AnalyticsService
 from app.services.evaluator import EvaluatorService
 from app.services.gate import EvalGateService
 from app.services.model_registry import ModelRegistry
@@ -37,6 +40,10 @@ def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
+def get_analytics(request: Request) -> AnalyticsService:
+    return request.app.state.analytics
+
+
 @router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -45,6 +52,40 @@ async def health() -> dict[str, str]:
 @router.get("/models")
 async def models(registry: ModelRegistry = Depends(get_registry)) -> dict[str, object]:
     return {"default_model": registry.get_default_model_id(), "models": registry.list_models()}
+
+
+@router.get("/metrics", response_model=MetricsResponse)
+async def metrics(
+    model_id: str | None = None,
+    prompt_version: str | None = None,
+    dataset_version: str | None = None,
+    limit: int = 100,
+    analytics: AnalyticsService = Depends(get_analytics),
+) -> MetricsResponse:
+    if limit < 1 or limit > 500:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit must be in range 1..500.")
+    return analytics.get_metrics(
+        model_id=model_id,
+        prompt_version=prompt_version,
+        dataset_version=dataset_version,
+        limit=limit,
+    )
+
+
+@router.get("/model-comparison", response_model=ModelComparisonResponse)
+async def model_comparison(
+    prompt_version: str | None = None,
+    dataset_version: str | None = None,
+    limit: int = 400,
+    analytics: AnalyticsService = Depends(get_analytics),
+) -> ModelComparisonResponse:
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit must be in range 1..1000.")
+    return analytics.get_model_comparison(
+        prompt_version=prompt_version,
+        dataset_version=dataset_version,
+        limit=limit,
+    )
 
 
 @router.post("/run-eval", response_model=RunEvalResponse)
@@ -72,6 +113,11 @@ async def compare(
         model_id=None,
         cases=payload.cases,
         system_prompt=payload.system_prompt,
+        prompt_version=payload.prompt_version,
+        dataset_version=payload.dataset_version,
+        prompt_template=payload.prompt_template,
+        temperature=payload.temperature,
+        max_tokens=payload.max_tokens,
     )
     try:
         runs = await evaluator.compare(payload.model_ids, run_request)

@@ -74,6 +74,8 @@ uvicorn app.main:app --reload
 
 - `GET /api/v1/health` - service health
 - `GET /api/v1/models` - available model IDs/config
+- `GET /api/v1/metrics` - aggregated run metrics from versioned artifacts
+- `GET /api/v1/model-comparison` - model-level comparison summary
 - `POST /api/v1/run-eval` - run evaluation on one model
 - `POST /api/v1/compare` - run side-by-side comparison across models
 - `POST /api/v1/eval-gate` - run eval and apply CI/CD gate thresholds
@@ -98,6 +100,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/run-eval" \
 - Cost is estimated via configurable per-1k token pricing in `config/models.yaml`.
 - Scoring is intentionally lightweight in v0.1 and designed for extension.
 - Run artifacts are versioned and can be exported to CSV for Power BI.
+- The metrics endpoints are built on top of stored run artifacts, so dashboards can query historical runs.
 
 ## Must-have features implemented
 
@@ -153,4 +156,4 @@ python scripts/ci_eval_gate.py
 
 - Drift monitoring worker (weekly trend comparisons)
 - Human-in-the-loop review queue
-- PostgreSQL persistence + Power BI semantic model
+- Direct PostgreSQL write-path for all runs in API flow

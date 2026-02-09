@@ -1,5 +1,6 @@
 import math
 import uuid
+from datetime import UTC, datetime
 from statistics import mean
 
 from app.adapters.base import ModelConfig
@@ -62,6 +63,7 @@ class EvaluatorService:
         summary = self._summarize(results)
         run = RunEvalResponse(
             run_id=str(uuid.uuid4()),
+            created_at=datetime.now(tz=UTC).isoformat(),
             model_id=model_id,
             version_info=VersionInfo(
                 prompt_version=request.prompt_version,

@@ -37,6 +37,7 @@ def test_run_eval_with_mock_default_model() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["model_id"] == "mock-local"
+    assert payload["created_at"] is not None
     assert payload["version_info"]["prompt_version"] == "v1"
     assert payload["version_info"]["dataset_version"] == "v1"
     assert payload["summary"]["total_cases"] == 1
@@ -82,3 +83,31 @@ def test_eval_gate_passes_with_relaxed_threshold() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["passed"] is True
+
+
+def test_metrics_endpoint() -> None:
+    client = TestClient(create_app())
+    _ = client.post(
+        "/api/v1/run-eval",
+        json={
+            "model_id": "mock-local",
+            "prompt_version": "prompt-v1",
+            "dataset_version": "baseline-v1",
+            "cases": [{"id": "c1", "question": "What is 5 + 7?", "reference_answer": "12"}],
+        },
+    )
+    response = client.get("/api/v1/metrics?model_id=mock-local&limit=10")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total_runs"] >= 1
+    assert "summary" in payload
+    assert "items" in payload
+
+
+def test_model_comparison_endpoint() -> None:
+    client = TestClient(create_app())
+    response = client.get("/api/v1/model-comparison?limit=20")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "total_models" in payload
+    assert "models" in payload

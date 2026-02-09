@@ -58,6 +58,7 @@ class VersionInfo(BaseModel):
 
 class RunEvalResponse(BaseModel):
     run_id: str
+    created_at: str | None = None
     model_id: str
     version_info: VersionInfo
     summary: RunSummary
@@ -68,6 +69,11 @@ class CompareRequest(BaseModel):
     model_ids: list[str]
     cases: list[EvaluationCase]
     system_prompt: str | None = None
+    prompt_version: str = Field(default="v1")
+    dataset_version: str = Field(default="v1")
+    prompt_template: str = Field(default="{question}")
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=512, ge=1, le=4096)
 
 
 class CompareResponse(BaseModel):
@@ -89,3 +95,48 @@ class EvalGateResponse(BaseModel):
     passed: bool
     reasons: list[str]
     run: RunEvalResponse
+
+
+class RunMetricItem(BaseModel):
+    run_id: str
+    created_at: str
+    model_id: str
+    prompt_version: str
+    dataset_version: str
+    avg_accuracy: float
+    avg_hallucination_risk: float
+    avg_safety_risk: float
+    avg_latency_ms: float
+    total_cost_usd: float
+    total_cases: int
+
+
+class MetricsSummary(BaseModel):
+    avg_accuracy: float
+    avg_hallucination_risk: float
+    avg_safety_risk: float
+    avg_latency_ms: float
+    total_cost_usd: float
+    total_cases: int
+
+
+class MetricsResponse(BaseModel):
+    total_runs: int
+    summary: MetricsSummary
+    items: list[RunMetricItem]
+
+
+class ModelComparisonItem(BaseModel):
+    model_id: str
+    runs: int
+    avg_accuracy: float
+    avg_hallucination_risk: float
+    avg_safety_risk: float
+    avg_latency_ms: float
+    total_cost_usd: float
+    total_cases: int
+
+
+class ModelComparisonResponse(BaseModel):
+    total_models: int
+    models: list[ModelComparisonItem]

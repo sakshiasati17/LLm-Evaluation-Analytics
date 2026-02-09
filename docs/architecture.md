@@ -25,6 +25,5 @@
 ## Extension points
 
 - Replace heuristics with LLM-as-judge or custom rubric scorers
-- Persist run outputs into PostgreSQL
 - Add drift worker to compare week-over-week baseline metrics
-- Add persistent run store in PostgreSQL
+- Add direct PostgreSQL persistence in API write-path
