@@ -1,0 +1,42 @@
+default_model: mock-local
+
+models:
+  - id: mock-local
+    provider: mock
+    api_model: mock-v1
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.0
+      completion_per_1k: 0.0
+
+  - id: gpt-5-mini
+    provider: openai
+    api_model: gpt-5-mini
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.0008
+      completion_per_1k: 0.0024
+
+  - id: claude-sonnet-4-5
+    provider: anthropic
+    api_model: claude-sonnet-4-5
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.0030
+      completion_per_1k: 0.0150
+
+  - id: gemini-2.5-pro
+    provider: google
+    api_model: gemini-2.5-pro
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.00125
+      completion_per_1k: 0.0050
+
+  - id: command-a-03-2025
+    provider: cohere
+    api_model: command-a-03-2025
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.0010
+      completion_per_1k: 0.0020
