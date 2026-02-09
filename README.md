@@ -17,6 +17,7 @@ Core goals:
 - Python 3.11+
 - FastAPI
 - PostgreSQL (planned persistence integration)
+- Power BI (analytics and stakeholder dashboards)
 - YAML-based model registry
 - Multi-provider adapter layer (OpenAI, Anthropic, Google, Cohere)
 
@@ -37,6 +38,8 @@ Core goals:
 ├── scripts               # CI gate scripts and utilities
 ├── tests
 ├── docker-compose.yml
+├── sql                   # Analytics schema and views for BI
+├── docs                  # Architecture + Power BI setup
 ├── Dockerfile
 └── pyproject.toml
 ```
@@ -94,6 +97,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/run-eval" \
 - Default config includes 4 major providers and one local mock model.
 - Cost is estimated via configurable per-1k token pricing in `config/models.yaml`.
 - Scoring is intentionally lightweight in v0.1 and designed for extension.
+- Run artifacts are versioned and can be exported to CSV for Power BI.
 
 ## Must-have features implemented
 
@@ -121,6 +125,23 @@ curl -X POST "http://127.0.0.1:8000/api/v1/run-eval" \
   - Slack webhook (`SLACK_WEBHOOK_URL`)
   - SMTP email recipients (`ALERT_TO_EMAILS`)
 - Alerting is non-blocking. Eval result is still returned if alert delivery fails.
+
+## Power BI analytics
+
+Two ingestion paths are supported:
+
+1. CSV path (works now)
+- Export run artifacts to CSV:
+```bash
+python scripts/export_artifacts_csv.py
+```
+- Load `artifacts/exports/evaluations.csv` into Power BI Desktop.
+
+2. PostgreSQL path (recommended for scale)
+- Use schema in `sql/analytics_schema.sql`.
+- Connect Power BI to PostgreSQL and model around `runs`, `evaluations`, and `scores`.
+
+Detailed setup: `docs/powerbi.md`.
 
 ## CI gate run
 

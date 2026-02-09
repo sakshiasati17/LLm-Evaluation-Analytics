@@ -1,4 +1,4 @@
-.PHONY: setup run test lint format gate
+.PHONY: setup run test lint format gate export-csv
 
 setup:
 	python3 -m venv .venv
@@ -18,3 +18,6 @@ format:
 
 gate:
 	python scripts/ci_eval_gate.py
+
+export-csv:
+	python scripts/export_artifacts_csv.py

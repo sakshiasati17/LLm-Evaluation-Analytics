@@ -9,6 +9,7 @@
 5. Eval gate optionally enforces thresholds (CI/CD policy).
 6. Run metadata and results are stored as versioned JSON artifacts.
 7. Optional alerts are sent on gate failure.
+8. Analytics is exposed to Power BI via CSV export or PostgreSQL schema.
 
 ## Core boundaries
 
@@ -18,6 +19,8 @@
 - `config/models.yaml`: model catalog + pricing metadata
 - `datasets/*`: versioned benchmark datasets
 - `.github/workflows/eval-gate.yml`: release quality gate
+- `sql/analytics_schema.sql`: BI-ready relational schema
+- `docs/powerbi.md`: dashboard setup and visuals
 
 ## Extension points
 
