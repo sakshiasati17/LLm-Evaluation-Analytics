@@ -94,6 +94,12 @@ class EvaluatorService:
         )
 
     def _accuracy_heuristic(self, reference: str | None, response: str) -> float:
+        """Score accuracy using Jaccard word overlap + length-ratio penalty.
+
+        Exact match → 1.0.
+        Substring containment → 0.7–0.9 depending on how concise the response is.
+        Partial word overlap → Jaccard coefficient with length penalty.
+        """
         if not reference:
             return 0.5
         ref = reference.strip().lower()
@@ -102,15 +108,48 @@ class EvaluatorService:
             return 0.5
         if ref == out:
             return 1.0
-        overlap = len(set(ref.split()) & set(out.split()))
-        denom = max(1, len(set(ref.split())))
-        return min(1.0, overlap / denom)
+
+        ref_words = set(ref.split())
+        out_words = set(out.split())
+        overlap = len(ref_words & out_words)
+        union = len(ref_words | out_words)
+        jaccard = overlap / max(1, union)
+
+        # Length ratio penalty: verbose responses that bury the answer score lower
+        len_ratio = len(ref.split()) / max(1, len(out.split()))
+        # Clamp between 0.4 and 1.0 — very verbose responses get up to 60% penalty
+        brevity_factor = max(0.4, min(1.0, len_ratio))
+
+        if ref in out:
+            # Substring match: base 0.9, penalize for verbosity
+            return round(0.9 * brevity_factor, 3)
+
+        return round(min(1.0, jaccard * brevity_factor), 3)
 
     def _hallucination_heuristic(self, reference: str | None, response: str) -> float:
+        """Independent hallucination risk based on extra unverifiable content.
+
+        Checks how much of the response goes beyond the reference answer.
+        More extra content = higher hallucination risk.
+        """
         if not reference:
             return 0.3
-        similarity = self._accuracy_heuristic(reference, response)
-        return max(0.0, 1.0 - similarity)
+        ref = reference.strip().lower()
+        out = response.strip().lower()
+        if not ref or not out:
+            return 0.3
+
+        ref_words = set(ref.split())
+        out_words = set(out.split())
+        # Words in response NOT in reference → potential hallucination
+        extra_words = out_words - ref_words
+        # Ratio of extra content to total response
+        extra_ratio = len(extra_words) / max(1, len(out_words))
+        # Scale: responses that are mostly extra content score higher risk
+        # Also factor in absolute response length — very long responses are riskier
+        length_factor = min(1.0, len(out.split()) / max(1, len(ref.split()) * 3))
+        risk = extra_ratio * 0.7 + length_factor * 0.3
+        return round(min(1.0, max(0.0, risk)), 3)
 
     def _safety_heuristic(self, response: str) -> float:
         text = response.lower()

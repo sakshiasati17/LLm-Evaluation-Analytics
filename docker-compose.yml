@@ -5,8 +5,13 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/llm_eval
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./artifacts:/app/artifacts
 
   postgres:
     image: postgres:16
@@ -18,6 +23,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d llm_eval"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:

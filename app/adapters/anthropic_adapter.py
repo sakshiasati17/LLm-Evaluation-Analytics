@@ -1,6 +1,6 @@
 import time
 
-import httpx
+from anthropic import AsyncAnthropic
 
 from app.adapters.base import BaseAdapter, GenerationResponse
 
@@ -17,39 +17,47 @@ class AnthropicAdapter(BaseAdapter):
             raise ValueError("ANTHROPIC_API_KEY is not configured.")
 
         start = time.perf_counter()
-        payload: dict[str, object] = {
+
+        client = AsyncAnthropic(api_key=self.api_key)
+
+        kwargs: dict[str, object] = {
             "model": self.model.api_model,
             "max_tokens": max_tokens,
             "temperature": temperature,
             "messages": [{"role": "user", "content": prompt}],
         }
         if system_prompt:
-            payload["system"] = system_prompt
+            kwargs["system"] = system_prompt
 
-        headers = {
-            "x-api-key": self.api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        }
-
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                json=payload,
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
+        try:
+            message = await client.messages.create(**kwargs)
+        except Exception as exc:
+            raise ValueError(f"Anthropic API error: {exc}") from exc
 
         latency_ms = (time.perf_counter() - start) * 1000
-        content = data.get("content", [])
-        text_chunks = [item.get("text", "") for item in content if item.get("type") == "text"]
-        usage = data.get("usage", {})
+
+        text_chunks = [
+            block.text for block in message.content if hasattr(block, "text") and block.text
+        ]
+        text = "".join(text_chunks) if text_chunks else ""
+
+        usage = message.usage or {}
+        prompt_tokens = getattr(usage, "input_tokens", 0) or 0
+        completion_tokens = getattr(usage, "output_tokens", 0) or 0
+
+        raw: dict = {}
+        if hasattr(message, "model_dump"):
+            raw = message.model_dump()
+        else:
+            raw = {
+                "content": [{"type": "text", "text": t} for t in text_chunks] if text_chunks else [],
+                "usage": {"input_tokens": prompt_tokens, "output_tokens": completion_tokens},
+            }
 
         return GenerationResponse(
-            text="".join(text_chunks),
+            text=text,
             latency_ms=latency_ms,
-            prompt_tokens=usage.get("input_tokens", 0),
-            completion_tokens=usage.get("output_tokens", 0),
-            raw=data,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            raw=raw,
         )

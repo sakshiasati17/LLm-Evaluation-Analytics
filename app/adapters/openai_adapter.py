@@ -36,7 +36,12 @@ class OpenAIAdapter(BaseAdapter):
                 json=payload,
                 headers=headers,
             )
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise ValueError(
+                    f"OpenAI API error {exc.response.status_code}: {exc.response.text}"
+                ) from exc
             data = response.json()
 
         latency_ms = (time.perf_counter() - start) * 1000

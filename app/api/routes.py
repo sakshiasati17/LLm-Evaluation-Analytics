@@ -13,6 +13,7 @@ from app.schemas.evaluation import (
 )
 from app.services.alerts import AlertService
 from app.services.analytics import AnalyticsService
+from app.services.db_store import DBStore
 from app.services.evaluator import EvaluatorService
 from app.services.gate import EvalGateService
 from app.services.model_registry import ModelRegistry
@@ -42,6 +43,10 @@ def get_settings(request: Request) -> Settings:
 
 def get_analytics(request: Request) -> AnalyticsService:
     return request.app.state.analytics
+
+
+def get_db_store(request: Request) -> DBStore:
+    return request.app.state.db_store
 
 
 @router.get("/health")
@@ -92,9 +97,15 @@ async def model_comparison(
 async def run_eval(
     payload: RunEvalRequest,
     evaluator: EvaluatorService = Depends(get_evaluator),
+    db_store: DBStore = Depends(get_db_store),
 ) -> RunEvalResponse:
     try:
-        return await evaluator.run_eval(payload)
+        result = await evaluator.run_eval(payload)
+        db_store.save(result)
+        # Broadcast to WebSocket clients for real-time dashboard updates
+        from app.main import ws_manager
+        await ws_manager.broadcast({"event": "eval_complete", "model_id": result.model_id, "run_id": result.run_id})
+        return result
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -103,6 +114,7 @@ async def run_eval(
 async def compare(
     payload: CompareRequest,
     evaluator: EvaluatorService = Depends(get_evaluator),
+    db_store: DBStore = Depends(get_db_store),
 ) -> CompareResponse:
     if not payload.model_ids:
         raise HTTPException(
@@ -121,6 +133,8 @@ async def compare(
     )
     try:
         runs = await evaluator.compare(payload.model_ids, run_request)
+        for run in runs:
+            db_store.save(run)
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return CompareResponse(runs=runs)

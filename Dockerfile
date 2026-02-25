@@ -5,6 +5,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY app ./app
 COPY config ./config
+COPY sql ./sql
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .

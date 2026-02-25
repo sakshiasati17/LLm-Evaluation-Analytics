@@ -17,14 +17,17 @@ class CohereAdapter(BaseAdapter):
             raise ValueError("COHERE_API_KEY is not configured.")
 
         start = time.perf_counter()
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         payload = {
             "model": self.model.api_model,
-            "message": prompt,
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        if system_prompt:
-            payload["preamble"] = system_prompt
 
         headers = {"Authorization": f"Bearer {self.api_key}"}
         async with httpx.AsyncClient(timeout=60) as client:
@@ -33,7 +36,12 @@ class CohereAdapter(BaseAdapter):
                 json=payload,
                 headers=headers,
             )
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise ValueError(
+                    f"Cohere API error {exc.response.status_code}: {exc.response.text}"
+                ) from exc
             data = response.json()
 
         latency_ms = (time.perf_counter() - start) * 1000

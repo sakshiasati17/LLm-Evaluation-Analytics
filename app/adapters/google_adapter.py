@@ -29,7 +29,12 @@ class GoogleAdapter(BaseAdapter):
 
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(url, json=payload)
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise ValueError(
+                    f"Google API error {exc.response.status_code}: {exc.response.text}"
+                ) from exc
             data = response.json()
 
         latency_ms = (time.perf_counter() - start) * 1000
@@ -37,13 +42,22 @@ class GoogleAdapter(BaseAdapter):
         text = ""
         if candidates:
             parts = candidates[0].get("content", {}).get("parts", [])
-            text = "".join(part.get("text", "") for part in parts)
+            # Filter out "thought" parts (gemini-2.5-pro thinking mode)
+            text_parts = [
+                part.get("text", "")
+                for part in parts
+                if "thought" not in part and part.get("text")
+            ]
+            # Fallback: if no non-thought parts, grab any text
+            if not text_parts:
+                text_parts = [part.get("text", "") for part in parts if part.get("text")]
+            text = "".join(text_parts)
 
         usage = data.get("usageMetadata", {})
         return GenerationResponse(
             text=text,
             latency_ms=latency_ms,
             prompt_tokens=usage.get("promptTokenCount", 0),
-            completion_tokens=usage.get("candidatesTokenCount", 0),
+            completion_tokens=usage.get("candidatesTokenCount", usage.get("totalTokenCount", 0)),
             raw=data,
         )
