@@ -1,0 +1,45 @@
+tasks:
+  - id: reasoning
+    name: Reasoning & Logic
+    description: Math, logic puzzles, multi-step problem solving
+    benchmark: reasoning_sample
+    recommended_models:
+      - gpt-4o-mini
+      - claude-sonnet-4-5
+      - openrouter/meta-llama/llama-3.3-70b-instruct
+
+  - id: coding
+    name: Code Generation
+    description: Writing, debugging, and explaining code
+    benchmark: coding_sample
+    recommended_models:
+      - gpt-4o-mini
+      - claude-sonnet-4-5
+      - openrouter/mistralai/mistral-large-2
+
+  - id: knowledge
+    name: Knowledge & QA
+    description: Factual Q&A, trivia, domain expertise
+    benchmark: mmlu_sample
+    recommended_models:
+      - gpt-4o-mini
+      - openrouter/mistralai/mistral-large-2
+      - gemini-2.0-flash
+
+  - id: creative
+    name: Creative Writing
+    description: Stories, essays, marketing copy, brainstorming
+    benchmark: truthfulqa_sample
+    recommended_models:
+      - claude-sonnet-4-5
+      - gpt-4o-mini
+      - openrouter/meta-llama/llama-3.3-70b-instruct
+
+  - id: analysis
+    name: Data Analysis
+    description: Data interpretation, summarization, insights extraction
+    benchmark: reasoning_sample
+    recommended_models:
+      - gpt-4o-mini
+      - claude-sonnet-4-5
+      - openrouter/google/gemini-2.0-flash

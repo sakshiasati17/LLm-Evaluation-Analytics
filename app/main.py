@@ -8,11 +8,13 @@ from app.api.routes import router
 from app.core.config import get_settings
 from app.services.alerts import AlertService
 from app.services.analytics import AnalyticsService
+from app.services.benchmark import BenchmarkService
 from app.services.db_store import DBStore
 from app.services.evaluator import EvaluatorService
 from app.services.gate import EvalGateService
 from app.services.model_registry import ModelRegistry
 from app.services.run_store import RunStore
+from app.services.task_recommender import TaskRecommender
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -54,6 +56,14 @@ def create_app() -> FastAPI:
     alerts = AlertService(settings=settings)
     db_store = DBStore(database_url=settings.database_url)
     db_store.init_schema()  # idempotent CREATE IF NOT EXISTS
+    benchmark_service = BenchmarkService(
+        benchmarks_dir=settings.benchmarks_dir, evaluator=evaluator
+    )
+    task_recommender = TaskRecommender(
+        tasks_path=settings.tasks_path,
+        registry=registry,
+        benchmark_service=benchmark_service,
+    )
 
     app = FastAPI(title=settings.app_name, version="0.1.0")
     app.state.settings = settings
@@ -64,6 +74,8 @@ def create_app() -> FastAPI:
     app.state.alerts = alerts
     app.state.db_store = db_store
     app.state.ws_manager = ws_manager
+    app.state.benchmark_service = benchmark_service
+    app.state.task_recommender = task_recommender
     app.include_router(router, prefix="/api/v1", tags=["evaluation"])
 
     # Dashboard route

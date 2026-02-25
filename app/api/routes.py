@@ -2,21 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.config import Settings
 from app.schemas.evaluation import (
+    BenchmarkListResponse,
     CompareRequest,
     CompareResponse,
     EvalGateRequest,
     EvalGateResponse,
     MetricsResponse,
     ModelComparisonResponse,
+    RunBenchmarkRequest,
+    RunBenchmarkResponse,
     RunEvalRequest,
     RunEvalResponse,
+    RunTaskRequest,
+    RunTaskResponse,
+    TaskInfo,
+    TaskListResponse,
+    TaskRecommendation,
 )
 from app.services.alerts import AlertService
 from app.services.analytics import AnalyticsService
+from app.services.benchmark import BenchmarkService
 from app.services.db_store import DBStore
 from app.services.evaluator import EvaluatorService
 from app.services.gate import EvalGateService
 from app.services.model_registry import ModelRegistry
+from app.services.task_recommender import TaskRecommender
 
 router = APIRouter()
 
@@ -47,6 +57,14 @@ def get_analytics(request: Request) -> AnalyticsService:
 
 def get_db_store(request: Request) -> DBStore:
     return request.app.state.db_store
+
+
+def get_benchmark_service(request: Request) -> BenchmarkService:
+    return request.app.state.benchmark_service
+
+
+def get_task_recommender(request: Request) -> TaskRecommender:
+    return request.app.state.task_recommender
 
 
 @router.get("/health")
@@ -175,3 +193,78 @@ async def eval_gate(
         except Exception as exc:  # noqa: BLE001
             gate_result.reasons.append(f"alerting_failed: {exc}")
     return gate_result
+
+
+# ── Benchmark Endpoints ─────────────────────────────────────────────
+
+
+@router.get("/benchmarks", response_model=BenchmarkListResponse, tags=["benchmarks"])
+async def list_benchmarks(
+    bench: BenchmarkService = Depends(get_benchmark_service),
+) -> BenchmarkListResponse:
+    return BenchmarkListResponse(benchmarks=bench.list_benchmarks())
+
+
+@router.post("/benchmarks/run", response_model=RunBenchmarkResponse, tags=["benchmarks"])
+async def run_benchmark(
+    payload: RunBenchmarkRequest,
+    bench: BenchmarkService = Depends(get_benchmark_service),
+    db_store: DBStore = Depends(get_db_store),
+) -> RunBenchmarkResponse:
+    try:
+        run = await bench.run_benchmark(
+            name=payload.benchmark,
+            model_id=payload.model_id,
+            temperature=payload.temperature,
+            max_tokens=payload.max_tokens,
+        )
+        db_store.save(run)
+        from app.main import ws_manager
+        await ws_manager.broadcast({"event": "benchmark_complete", "benchmark": payload.benchmark, "model_id": run.model_id, "run_id": run.run_id})
+        return RunBenchmarkResponse(benchmark=payload.benchmark, run=run)
+    except (KeyError, ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+# ── Task Endpoints ──────────────────────────────────────────────────
+
+
+@router.get("/tasks", response_model=TaskListResponse, tags=["tasks"])
+async def list_tasks(
+    recommender: TaskRecommender = Depends(get_task_recommender),
+) -> TaskListResponse:
+    return TaskListResponse(tasks=recommender.list_tasks())
+
+
+@router.get("/tasks/{task_id}/recommend", response_model=TaskRecommendation, tags=["tasks"])
+async def task_recommend(
+    task_id: str,
+    recommender: TaskRecommender = Depends(get_task_recommender),
+) -> TaskRecommendation:
+    try:
+        rec = recommender.get_recommendations(task_id)
+        return TaskRecommendation(**rec)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/tasks/run", response_model=RunTaskResponse, tags=["tasks"])
+async def run_task(
+    payload: RunTaskRequest,
+    recommender: TaskRecommender = Depends(get_task_recommender),
+    db_store: DBStore = Depends(get_db_store),
+) -> RunTaskResponse:
+    try:
+        task, run = await recommender.run_task_evaluation(
+            task_id=payload.task_id,
+            model_id=payload.model_id,
+            temperature=payload.temperature,
+            max_tokens=payload.max_tokens,
+        )
+        db_store.save(run)
+        from app.main import ws_manager
+        await ws_manager.broadcast({"event": "task_eval_complete", "task_id": payload.task_id, "model_id": run.model_id, "run_id": run.run_id})
+        return RunTaskResponse(task=task, benchmark_run=run)
+    except (KeyError, ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+

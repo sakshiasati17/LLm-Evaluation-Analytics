@@ -9,6 +9,7 @@ class Provider(StrEnum):
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
     COHERE = "cohere"
+    OPENROUTER = "openrouter"
     MOCK = "mock"
 
 

@@ -111,3 +111,78 @@ def test_model_comparison_endpoint() -> None:
     payload = response.json()
     assert "total_models" in payload
     assert "models" in payload
+
+
+def test_benchmarks_list() -> None:
+    client = TestClient(create_app())
+    response = client.get("/api/v1/benchmarks")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "benchmarks" in payload
+    names = [b["name"] for b in payload["benchmarks"]]
+    assert "mmlu_sample" in names
+    assert "truthfulqa_sample" in names
+    assert "reasoning_sample" in names
+    assert "coding_sample" in names
+    assert all(b["total_cases"] == 10 for b in payload["benchmarks"])
+
+
+def test_run_benchmark_with_mock() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/benchmarks/run",
+        json={"benchmark": "mmlu_sample", "model_id": "mock-local"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["benchmark"] == "mmlu_sample"
+    assert payload["run"]["model_id"] == "mock-local"
+    assert payload["run"]["summary"]["total_cases"] == 10
+
+
+def test_tasks_list() -> None:
+    client = TestClient(create_app())
+    response = client.get("/api/v1/tasks")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "tasks" in payload
+    task_ids = [t["id"] for t in payload["tasks"]]
+    assert "reasoning" in task_ids
+    assert "coding" in task_ids
+    assert "knowledge" in task_ids
+    assert "creative" in task_ids
+    assert "analysis" in task_ids
+
+
+def test_task_recommend() -> None:
+    client = TestClient(create_app())
+    response = client.get("/api/v1/tasks/reasoning/recommend")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["task"]["id"] == "reasoning"
+    assert payload["task"]["benchmark"] == "reasoning_sample"
+    assert "available_models" in payload
+
+
+def test_run_task_with_mock() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/tasks/run",
+        json={"task_id": "knowledge", "model_id": "mock-local"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["task"]["id"] == "knowledge"
+    assert payload["benchmark_run"]["model_id"] == "mock-local"
+    assert payload["benchmark_run"]["summary"]["total_cases"] == 10
+
+
+def test_openrouter_models_listed() -> None:
+    client = TestClient(create_app())
+    response = client.get("/api/v1/models")
+    assert response.status_code == 200
+    payload = response.json()
+    model_ids = [m["id"] for m in payload["models"]]
+    assert "openrouter/meta-llama/llama-3.3-70b-instruct" in model_ids
+    assert "openrouter/mistralai/mistral-large-2" in model_ids
+    assert "openrouter/google/gemini-2.0-flash" in model_ids

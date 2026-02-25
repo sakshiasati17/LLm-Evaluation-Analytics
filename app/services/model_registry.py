@@ -8,6 +8,7 @@ from app.adapters.cohere_adapter import CohereAdapter
 from app.adapters.google_adapter import GoogleAdapter
 from app.adapters.mock_adapter import MockAdapter
 from app.adapters.openai_adapter import OpenAIAdapter
+from app.adapters.openrouter_adapter import OpenRouterAdapter
 from app.core.config import Settings
 
 
@@ -80,6 +81,8 @@ class ModelRegistry:
             return GoogleAdapter(model=model, api_key=self.settings.google_api_key)
         if model.provider == Provider.COHERE:
             return CohereAdapter(model=model, api_key=self.settings.cohere_api_key)
+        if model.provider == Provider.OPENROUTER:
+            return OpenRouterAdapter(model=model, api_key=self.settings.openrouter_api_key)
         if model.provider == Provider.MOCK:
             return MockAdapter(model=model)
         raise ValueError(f"Unsupported provider: {model.provider}")

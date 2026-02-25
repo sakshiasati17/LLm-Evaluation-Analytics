@@ -140,3 +140,60 @@ class ModelComparisonItem(BaseModel):
 class ModelComparisonResponse(BaseModel):
     total_models: int
     models: list[ModelComparisonItem]
+
+
+# ── Benchmark Schemas ─────────────────────────────────────────────────
+
+class BenchmarkInfo(BaseModel):
+    name: str
+    display_name: str
+    description: str
+    category: str
+    total_cases: int
+
+
+class BenchmarkListResponse(BaseModel):
+    benchmarks: list[BenchmarkInfo]
+
+
+class RunBenchmarkRequest(BaseModel):
+    benchmark: str = Field(description="Benchmark name, e.g. 'mmlu_sample'")
+    model_id: str | None = Field(default=None, description="Model to evaluate. Defaults to default model.")
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=512, ge=1, le=4096)
+
+
+class RunBenchmarkResponse(BaseModel):
+    benchmark: str
+    run: RunEvalResponse
+
+
+# ── Task Schemas ──────────────────────────────────────────────────────
+
+class TaskInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    benchmark: str
+    recommended_models: list[str]
+
+
+class TaskListResponse(BaseModel):
+    tasks: list[TaskInfo]
+
+
+class TaskRecommendation(BaseModel):
+    task: TaskInfo
+    available_models: list[dict[str, object]]
+
+
+class RunTaskRequest(BaseModel):
+    task_id: str = Field(description="Task category ID, e.g. 'reasoning'")
+    model_id: str | None = Field(default=None, description="Override model. Uses first recommended if omitted.")
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=512, ge=1, le=4096)
+
+
+class RunTaskResponse(BaseModel):
+    task: TaskInfo
+    benchmark_run: RunEvalResponse

@@ -48,3 +48,27 @@ models:
     pricing:
       prompt_per_1k: 0.0010
       completion_per_1k: 0.0020
+
+  - id: openrouter/meta-llama/llama-3.3-70b-instruct
+    provider: openrouter
+    api_model: meta-llama/llama-3.3-70b-instruct
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.00059
+      completion_per_1k: 0.00079
+
+  - id: openrouter/mistralai/mistral-large-2
+    provider: openrouter
+    api_model: mistralai/mistral-large-2
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.002
+      completion_per_1k: 0.006
+
+  - id: openrouter/google/gemini-2.0-flash
+    provider: openrouter
+    api_model: google/gemini-2.0-flash-001
+    enabled: true
+    pricing:
+      prompt_per_1k: 0.0001
+      completion_per_1k: 0.0004

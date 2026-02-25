@@ -644,6 +644,11 @@
             color: var(--amber);
         }
 
+        .tag-openrouter {
+            background: rgba(236, 72, 153, 0.12);
+            color: #ec4899;
+        }
+
         .tag-mock {
             color: var(--text-2);
             background: var(--bg-2);
@@ -1025,6 +1030,14 @@
                     <span class="nav-icon">▸</span> Live Eval
                 </div>
 
+                <div class="nav-section">Benchmarks</div>
+                <div class="nav-item" data-target="sec-benchmarks" onclick="navTo(this)">
+                    <span class="nav-icon">◆</span> Benchmarks
+                </div>
+                <div class="nav-item" data-target="sec-tasks" onclick="navTo(this)">
+                    <span class="nav-icon">⊕</span> Task Selection
+                </div>
+
                 <div class="nav-section">Links</div>
                 <div class="nav-item" onclick="window.open('/docs','_blank')">
                     <span class="nav-icon">⊞</span> API Docs
@@ -1035,7 +1048,8 @@
             </nav>
             <div class="sidebar-footer">
                 <div class="status-indicator">
-                    <div class="status-dot"></div> Connected
+                    <span class="ws-dot ws-disconnected" id="wsStatus"></span>
+                    <span id="wsLabel">Connecting...</span>
                 </div>
                 <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">Light</button>
             </div>
@@ -1272,6 +1286,51 @@
                 </div>
                 <div id="diffResult"></div>
             </div>
+
+            <!-- Benchmarks -->
+            <div class="section-label" id="sec-benchmarks">Benchmarks</div>
+            <div class="eval-panel">
+                <div class="eval-header">
+                    <div class="eval-live-dot" style="background:var(--purple)"></div>
+                    Run Benchmark
+                </div>
+                <div class="eval-form" style="grid-template-columns:200px 200px auto">
+                    <div class="field">
+                        <label>Benchmark</label>
+                        <select id="benchSelect">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Model</label>
+                        <select id="benchModel">
+                            <option value="mock-local">mock-local</option>
+                        </select>
+                    </div>
+                    <button class="btn-run" id="benchRunBtn" onclick="runBenchmark()">
+                        <span id="benchRunLabel">Run Benchmark</span>
+                    </button>
+                </div>
+                <div class="eval-result" id="benchResult">
+                    <div id="benchSummary" style="margin-top:12px"></div>
+                </div>
+            </div>
+            <div class="model-grid" id="benchCards"></div>
+
+            <!-- Task-Based Model Selection -->
+            <div class="section-label" id="sec-tasks">Task-Based Model Selection</div>
+            <div class="eval-panel">
+                <div class="eval-header">
+                    <div class="eval-live-dot" style="background:var(--cyan)"></div>
+                    Choose a Task
+                </div>
+                <div id="taskGrid"
+                    style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px">
+                </div>
+                <div class="eval-result" id="taskResult">
+                    <div id="taskSummary" style="margin-top:12px"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1282,12 +1341,18 @@
         const PROVIDERS = {
             'gpt-4o-mini': 'openai', 'claude-sonnet-4-5': 'anthropic',
             'gemini-2.0-flash': 'google', 'gemini-2.5-pro': 'google',
-            'command-a-03-2025': 'cohere', 'mock-local': 'mock'
+            'command-a-03-2025': 'cohere', 'mock-local': 'mock',
+            'openrouter/meta-llama/llama-3.3-70b-instruct': 'openrouter',
+            'openrouter/mistralai/mistral-large-2': 'openrouter',
+            'openrouter/google/gemini-2.0-flash': 'openrouter'
         };
         const MODEL_CLR = {
             'gpt-4o-mini': '#6366f1', 'claude-sonnet-4-5': '#8b5cf6',
             'gemini-2.0-flash': '#0ea5e9', 'command-a-03-2025': '#f97316',
-            'mock-local': '#71717a'
+            'mock-local': '#71717a',
+            'openrouter/meta-llama/llama-3.3-70b-instruct': '#ec4899',
+            'openrouter/mistralai/mistral-large-2': '#f43f5e',
+            'openrouter/google/gemini-2.0-flash': '#fb923c'
         };
         function clr(id) { return MODEL_CLR[id] || '#6366f1' }
         function vClass(v) { return v >= 0.7 ? 'val-good' : v >= 0.4 ? 'val-warn' : 'val-bad' }
@@ -1951,6 +2016,189 @@
             document.getElementById('diffResult').innerHTML = html;
         }
 
+        // ── Benchmarks ──
+        async function loadBenchmarks() {
+            try {
+                const r = await fetch('/api/v1/benchmarks');
+                const d = await r.json();
+                const sel = document.getElementById('benchSelect');
+                sel.innerHTML = '';
+                (d.benchmarks || []).forEach(b => {
+                    const o = document.createElement('option');
+                    o.value = b.name;
+                    o.textContent = `${b.display_name} (${b.total_cases} cases)`;
+                    sel.appendChild(o);
+                });
+                // Populate benchmark model select
+                const modelSel = document.getElementById('benchModel');
+                const evalSel = document.getElementById('evalModel');
+                modelSel.innerHTML = evalSel.innerHTML;
+
+                // Show benchmark cards
+                const cards = document.getElementById('benchCards');
+                cards.innerHTML = '';
+                (d.benchmarks || []).forEach(b => {
+                    const catColors = { knowledge: 'var(--accent)', hallucination: 'var(--amber)', reasoning: 'var(--purple)', coding: 'var(--cyan)' };
+                    const div = document.createElement('div');
+                    div.className = 'model-card';
+                    div.innerHTML = `
+                        <div class="mc-header">
+                            <div class="mc-name">${b.display_name}</div>
+                            <div class="mc-tag" style="background:${catColors[b.category] || 'var(--accent)'}22;color:${catColors[b.category] || 'var(--accent)'}">${b.category}</div>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-1);margin-bottom:8px">${b.description}</div>
+                        <div style="font-size:11px;color:var(--text-2)">${b.total_cases} test cases</div>
+                    `;
+                    cards.appendChild(div);
+                });
+            } catch (e) { console.error('Benchmarks load error:', e) }
+        }
+
+        async function runBenchmark() {
+            const benchmark = document.getElementById('benchSelect').value;
+            const model = document.getElementById('benchModel').value;
+            const btn = document.getElementById('benchRunBtn');
+            const lbl = document.getElementById('benchRunLabel');
+
+            if (!benchmark) { toast('Select a benchmark'); return; }
+
+            btn.disabled = true;
+            lbl.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const r = await fetch('/api/v1/benchmarks/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ benchmark, model_id: model })
+                });
+                if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
+                const data = await r.json();
+                const run = data.run;
+
+                document.getElementById('benchResult').classList.add('show');
+                document.getElementById('benchSummary').innerHTML = `
+                    <div class="result-grid">
+                        <div class="result-metrics" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
+                            <div class="result-metric">
+                                <div class="result-metric-label">Accuracy</div>
+                                <div class="result-metric-value ${vClass(run.summary.avg_accuracy)}">${(run.summary.avg_accuracy * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Hallucination</div>
+                                <div class="result-metric-value ${run.summary.avg_hallucination_risk > 0.3 ? 'val-bad' : 'val-good'}">${(run.summary.avg_hallucination_risk * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Latency</div>
+                                <div class="result-metric-value">${run.summary.avg_latency_ms.toFixed(0)}ms</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Cost</div>
+                                <div class="result-metric-value">$${run.summary.total_cost_usd.toFixed(4)}</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Cases</div>
+                                <div class="result-metric-value">${run.summary.total_cases}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-footer" style="margin-top:10px">
+                        Model: <strong>${run.model_id}</strong> · Benchmark: ${data.benchmark} · Run: ${run.run_id.slice(0, 8)}…
+                    </div>
+                `;
+                toast(`Benchmark ${data.benchmark}: ${(run.summary.avg_accuracy * 100).toFixed(0)}% accuracy on ${run.model_id}`);
+                await loadData();
+            } catch (e) {
+                toast('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                lbl.textContent = 'Run Benchmark';
+            }
+        }
+
+        // ── Tasks ──
+        async function loadTasks() {
+            try {
+                const r = await fetch('/api/v1/tasks');
+                const d = await r.json();
+                const grid = document.getElementById('taskGrid');
+                grid.innerHTML = '';
+                const icons = { reasoning: '🧠', coding: '💻', knowledge: '📚', creative: '✍️', analysis: '📊' };
+                (d.tasks || []).forEach(t => {
+                    const div = document.createElement('div');
+                    div.className = 'model-card';
+                    div.style.cursor = 'pointer';
+                    div.onclick = () => runTaskEval(t.id);
+                    div.innerHTML = `
+                        <div class="mc-header">
+                            <div class="mc-name">${icons[t.id] || '▸'} ${t.name}</div>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-1);margin-bottom:8px">${t.description}</div>
+                        <div style="font-size:11px;color:var(--text-2)">Benchmark: ${t.benchmark} · ${t.recommended_models.length} recommended models</div>
+                        <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
+                            ${t.recommended_models.map(m => `<span class="mc-tag tag-${PROVIDERS[m] || 'mock'}" style="font-size:9px">${m.split('/').pop()}</span>`).join('')}
+                        </div>
+                    `;
+                    grid.appendChild(div);
+                });
+            } catch (e) { console.error('Tasks load error:', e) }
+        }
+
+        async function runTaskEval(taskId) {
+            const grid = document.getElementById('taskGrid');
+            // Show loading state on clicked card
+            grid.querySelectorAll('.model-card').forEach(c => c.style.opacity = '0.5');
+            toast(`Running ${taskId} benchmark with recommended model...`);
+
+            try {
+                const r = await fetch('/api/v1/tasks/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task_id: taskId })
+                });
+                if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
+                const data = await r.json();
+                const run = data.benchmark_run;
+
+                document.getElementById('taskResult').classList.add('show');
+                document.getElementById('taskSummary').innerHTML = `
+                    <div style="margin-bottom:8px;font-size:13px;font-weight:600">${data.task.name} — Results</div>
+                    <div class="result-grid">
+                        <div class="result-metrics" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
+                            <div class="result-metric">
+                                <div class="result-metric-label">Accuracy</div>
+                                <div class="result-metric-value ${vClass(run.summary.avg_accuracy)}">${(run.summary.avg_accuracy * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Hallucination</div>
+                                <div class="result-metric-value ${run.summary.avg_hallucination_risk > 0.3 ? 'val-bad' : 'val-good'}">${(run.summary.avg_hallucination_risk * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Latency</div>
+                                <div class="result-metric-value">${run.summary.avg_latency_ms.toFixed(0)}ms</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Cost</div>
+                                <div class="result-metric-value">$${run.summary.total_cost_usd.toFixed(4)}</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Cases</div>
+                                <div class="result-metric-value">${run.summary.total_cases}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-footer" style="margin-top:10px">
+                        Model: <strong>${run.model_id}</strong> · Task: ${data.task.name} · Benchmark: ${data.task.benchmark}
+                    </div>
+                `;
+                toast(`${data.task.name}: ${(run.summary.avg_accuracy * 100).toFixed(0)}% on ${run.model_id}`);
+                await loadData();
+            } catch (e) {
+                toast('Error: ' + e.message);
+            } finally {
+                grid.querySelectorAll('.model-card').forEach(c => c.style.opacity = '1');
+            }
+        }
+
         // ── WebSocket Real-time ──
         let ws;
         function connectWS() {
@@ -1964,7 +2212,15 @@
                 const data = JSON.parse(e.data);
                 if (data.event === 'eval_complete') {
                     toast(`Real-time: ${data.model_id} eval completed`);
-                    loadData(); // Auto-refresh
+                    loadData();
+                }
+                if (data.event === 'benchmark_complete') {
+                    toast(`Real-time: ${data.benchmark} benchmark completed on ${data.model_id}`);
+                    loadData();
+                }
+                if (data.event === 'task_eval_complete') {
+                    toast(`Real-time: ${data.task_id} task evaluation completed on ${data.model_id}`);
+                    loadData();
                 }
             };
             ws.onclose = () => {
@@ -1978,6 +2234,8 @@
         // ── Init ──
         loadModels();
         loadData();
+        loadBenchmarks();
+        loadTasks();
         connectWS();
 
         document.addEventListener('keydown', e => {

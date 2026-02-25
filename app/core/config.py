@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     google_api_key: str | None = Field(default=None, alias="GOOGLE_API_KEY")
     cohere_api_key: str | None = Field(default=None, alias="COHERE_API_KEY")
+    openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
 
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
 
@@ -34,6 +35,14 @@ class Settings(BaseSettings):
     @property
     def models_path(self) -> Path:
         return Path(self.models_config_path)
+
+    @property
+    def tasks_path(self) -> Path:
+        return Path("config/tasks.yaml")
+
+    @property
+    def benchmarks_dir(self) -> Path:
+        return Path("datasets/benchmarks")
 
     @property
     def run_artifacts_path(self) -> Path:
