@@ -953,6 +953,77 @@
             color: var(--text-2);
         }
 
+        /* ── Scoring Method Badges ── */
+        .method-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .method-llm_judge {
+            background: rgba(59,130,246,0.15);
+            color: var(--accent);
+            border: 1px solid rgba(59,130,246,0.3);
+        }
+        .method-exact_match {
+            background: rgba(34,197,94,0.15);
+            color: var(--green);
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+        .method-heuristic {
+            background: rgba(245,158,11,0.15);
+            color: var(--amber);
+            border: 1px solid rgba(245,158,11,0.3);
+        }
+        .method-error {
+            background: rgba(239,68,68,0.15);
+            color: var(--red);
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+
+        /* ── Case Drill-Down Table ── */
+        .case-drill-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 12px;
+        }
+        .case-drill-table th {
+            text-align: left;
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-2);
+            border-bottom: 1px solid var(--border);
+        }
+        .case-drill-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-1);
+            vertical-align: top;
+        }
+        .case-drill-table tr:last-child td { border-bottom: none; }
+        .case-drill-table tr:hover td { background: var(--bg-2); }
+        .case-drill-table .q-cell {
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .case-drill-table .resp-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-2);
+        }
+        .case-error-row td { color: var(--red); font-style: italic; }
+
         /* ── WS Indicator ── */
         .ws-dot {
             width: 7px;
@@ -1115,6 +1186,11 @@
                         </div>
                     </div>
                     <div class="result-footer" id="resMeta"></div>
+                    <div id="resScoringBadge" style="margin-top:8px;display:none">
+                        <span style="font-size:11px;color:var(--text-2)">Scoring method: </span>
+                        <span id="resScoringMethod" class="method-badge"></span>
+                        <span id="resJudgeModel" style="font-size:11px;color:var(--text-2);margin-left:6px"></span>
+                    </div>
                 </div>
             </div>
 
@@ -1465,7 +1541,23 @@
                 document.getElementById('resMeta').innerHTML =
                     `Model: <strong>${run.model_id}</strong> · Run: ${run.run_id.slice(0, 8)}… · ${new Date().toLocaleTimeString()}`;
 
-                toast(`${run.model_id}: ${(acc * 100).toFixed(0)}% accuracy`);
+                // Show scoring method badge
+                const method = res.scores.scoring_method || 'heuristic';
+                const judgeModel = res.scores.judge_model;
+                const badgeEl = document.getElementById('resScoringBadge');
+                const methodEl = document.getElementById('resScoringMethod');
+                const judgeEl = document.getElementById('resJudgeModel');
+                badgeEl.style.display = 'block';
+                methodEl.textContent = method.replace('_', ' ');
+                methodEl.className = 'method-badge method-' + method;
+                judgeEl.textContent = judgeModel ? `via ${judgeModel}` : '';
+
+                // Show failed_cases warning if any
+                if (run.summary.failed_cases > 0) {
+                    toast(`⚠ ${run.summary.failed_cases} case(s) failed — check individual results`);
+                } else {
+                    toast(`${run.model_id}: ${(acc * 100).toFixed(0)}% accuracy`);
+                }
                 await loadData();
             } catch (e) {
                 toast('Error: ' + e.message);
@@ -1849,10 +1941,13 @@
                 met.items.forEach(item => {
                     const tr = document.createElement('tr');
                     const dt = item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+                    const failedBadge = (item.failed_cases > 0)
+                        ? `<span style="margin-left:4px;color:var(--red);font-size:10px">⚠ ${item.failed_cases} failed</span>`
+                        : '';
                     tr.innerHTML = `
           <td class="td-m">${item.model_id}</td>
           <td>${item.prompt_version || 'v1'} / ${item.dataset_version || 'v1'}</td>
-          <td>${item.total_cases}</td>
+          <td>${item.total_cases}${failedBadge}</td>
           <td class="${vClass(item.avg_accuracy)}" style="font-weight:600">${(item.avg_accuracy * 100).toFixed(1)}%</td>
           <td style="color:${item.avg_hallucination_risk > 0.3 ? 'var(--red)' : 'var(--green)'}">${(item.avg_hallucination_risk * 100).toFixed(1)}%</td>
           <td>${item.avg_latency_ms.toFixed(0)}ms</td>
@@ -2076,9 +2171,10 @@
                 const run = data.run;
 
                 document.getElementById('benchResult').classList.add('show');
+                const failedCount = run.summary.failed_cases || 0;
                 document.getElementById('benchSummary').innerHTML = `
                     <div class="result-grid">
-                        <div class="result-metrics" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
+                        <div class="result-metrics" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr">
                             <div class="result-metric">
                                 <div class="result-metric-label">Accuracy</div>
                                 <div class="result-metric-value ${vClass(run.summary.avg_accuracy)}">${(run.summary.avg_accuracy * 100).toFixed(1)}%</div>
@@ -2096,13 +2192,37 @@
                                 <div class="result-metric-value">$${run.summary.total_cost_usd.toFixed(4)}</div>
                             </div>
                             <div class="result-metric">
-                                <div class="result-metric-label">Cases</div>
-                                <div class="result-metric-value">${run.summary.total_cases}</div>
+                                <div class="result-metric-label">Passed</div>
+                                <div class="result-metric-value val-good">${run.summary.total_cases - failedCount}</div>
+                            </div>
+                            <div class="result-metric">
+                                <div class="result-metric-label">Failed</div>
+                                <div class="result-metric-value ${failedCount > 0 ? 'val-bad' : 'val-good'}">${failedCount}</div>
                             </div>
                         </div>
                     </div>
                     <div class="result-footer" style="margin-top:10px">
                         Model: <strong>${run.model_id}</strong> · Benchmark: ${data.benchmark} · Run: ${run.run_id.slice(0, 8)}…
+                    </div>
+                    <div style="margin-top:14px">
+                        <div class="section-label" style="margin:0 0 8px">Case-by-Case Results</div>
+                        <table class="case-drill-table">
+                            <thead><tr><th>#</th><th>Question</th><th>Response</th><th>Accuracy</th><th>Hallucination</th><th>Method</th><th>Latency</th></tr></thead>
+                            <tbody>
+                            ${run.results.map((r, i) => r.error
+                                ? `<tr class="case-error-row"><td>${i+1}</td><td class="q-cell" title="${r.question}">${r.question}</td><td colspan="5">ERROR: ${r.error}</td></tr>`
+                                : `<tr>
+                                    <td style="color:var(--text-2)">${i+1}</td>
+                                    <td class="q-cell" title="${r.question}">${r.question}</td>
+                                    <td class="resp-cell" title="${r.response}">${r.response || '—'}</td>
+                                    <td class="${vClass(r.scores.accuracy)}" style="font-weight:600">${(r.scores.accuracy*100).toFixed(0)}%</td>
+                                    <td style="color:${r.scores.hallucination_risk>0.3?'var(--red)':'var(--green)'}">${(r.scores.hallucination_risk*100).toFixed(0)}%</td>
+                                    <td><span class="method-badge method-${r.scores.scoring_method||'heuristic'}">${(r.scores.scoring_method||'heuristic').replace('_',' ')}</span></td>
+                                    <td style="color:var(--text-2)">${r.latency_ms.toFixed(0)}ms</td>
+                                  </tr>`
+                            ).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 `;
                 toast(`Benchmark ${data.benchmark}: ${(run.summary.avg_accuracy * 100).toFixed(0)}% accuracy on ${run.model_id}`);

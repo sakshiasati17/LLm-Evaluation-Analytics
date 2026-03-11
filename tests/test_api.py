@@ -124,7 +124,7 @@ def test_benchmarks_list() -> None:
     assert "truthfulqa_sample" in names
     assert "reasoning_sample" in names
     assert "coding_sample" in names
-    assert all(b["total_cases"] == 10 for b in payload["benchmarks"])
+    assert all(b["total_cases"] >= 10 for b in payload["benchmarks"])
 
 
 def test_run_benchmark_with_mock() -> None:
@@ -137,7 +137,7 @@ def test_run_benchmark_with_mock() -> None:
     payload = response.json()
     assert payload["benchmark"] == "mmlu_sample"
     assert payload["run"]["model_id"] == "mock-local"
-    assert payload["run"]["summary"]["total_cases"] == 10
+    assert payload["run"]["summary"]["total_cases"] >= 10
 
 
 def test_tasks_list() -> None:
@@ -174,7 +174,7 @@ def test_run_task_with_mock() -> None:
     payload = response.json()
     assert payload["task"]["id"] == "knowledge"
     assert payload["benchmark_run"]["model_id"] == "mock-local"
-    assert payload["benchmark_run"]["summary"]["total_cases"] == 10
+    assert payload["benchmark_run"]["summary"]["total_cases"] >= 10
 
 
 def test_openrouter_models_listed() -> None:

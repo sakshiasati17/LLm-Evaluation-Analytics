@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
@@ -51,7 +51,11 @@ def create_app() -> FastAPI:
     registry = ModelRegistry(settings=settings)
     run_store = RunStore(artifact_dir=settings.run_artifacts_path)
     analytics = AnalyticsService(run_store=run_store)
-    evaluator = EvaluatorService(registry=registry, run_store=run_store)
+    evaluator = EvaluatorService(
+        registry=registry,
+        run_store=run_store,
+        judge_model_id=settings.judge_model_id,
+    )
     eval_gate = EvalGateService()
     alerts = AlertService(settings=settings)
     db_store = DBStore(database_url=settings.database_url)
@@ -76,6 +80,31 @@ def create_app() -> FastAPI:
     app.state.ws_manager = ws_manager
     app.state.benchmark_service = benchmark_service
     app.state.task_recommender = task_recommender
+
+    # ── Optional API-key auth middleware ─────────────────────────────────────
+    # Activated only when PLATFORM_API_KEY is set in .env
+    @app.middleware("http")
+    async def api_key_middleware(request: Request, call_next):
+        api_key = settings.platform_api_key
+        if api_key:
+            # Skip auth for dashboard, static assets, health, and WebSocket
+            path = request.url.path
+            public = (
+                path.startswith("/dashboard")
+                or path.startswith("/static")
+                or path == "/api/v1/health"
+                or path.startswith("/ws/")
+                or path in ("/docs", "/openapi.json", "/redoc")
+            )
+            if not public:
+                header_key = request.headers.get("X-API-Key")
+                if header_key != api_key:
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid or missing X-API-Key header"},
+                    )
+        return await call_next(request)
+
     app.include_router(router, prefix="/api/v1", tags=["evaluation"])
 
     # Dashboard route
@@ -101,4 +130,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

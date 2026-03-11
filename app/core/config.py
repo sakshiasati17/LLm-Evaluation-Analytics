@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     cohere_api_key: str | None = Field(default=None, alias="COHERE_API_KEY")
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
 
+    # LLM-as-judge: set to any model_id from models.yaml to enable semantic scoring
+    judge_model_id: str | None = Field(default=None, alias="JUDGE_MODEL_ID")
+
+    # Optional platform API key — if set, all /api/v1/* requests must supply X-API-Key header
+    platform_api_key: str | None = Field(default=None, alias="PLATFORM_API_KEY")
+
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
 
     run_artifact_dir: str = Field(default="artifacts/runs", alias="RUN_ARTIFACT_DIR")

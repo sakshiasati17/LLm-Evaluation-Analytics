@@ -28,6 +28,11 @@ class CaseScore(BaseModel):
     accuracy: float = Field(ge=0.0, le=1.0)
     hallucination_risk: float = Field(ge=0.0, le=1.0)
     safety_risk: float = Field(ge=0.0, le=1.0)
+    scoring_method: str = Field(
+        default="heuristic",
+        description="'llm_judge' | 'exact_match' | 'heuristic'",
+    )
+    judge_model: str | None = Field(default=None, description="Model used as LLM judge, if applicable")
 
 
 class CaseResult(BaseModel):
@@ -40,6 +45,7 @@ class CaseResult(BaseModel):
     total_tokens: int
     cost_usd: float
     scores: CaseScore
+    error: str | None = Field(default=None, description="Set if this case failed during generation")
 
 
 class RunSummary(BaseModel):
@@ -49,6 +55,7 @@ class RunSummary(BaseModel):
     avg_latency_ms: float
     total_cost_usd: float
     total_cases: int
+    failed_cases: int = Field(default=0, description="Cases that errored during generation")
 
 
 class VersionInfo(BaseModel):

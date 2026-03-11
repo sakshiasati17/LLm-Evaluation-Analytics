@@ -1,3 +1,25 @@
-{"id":"arith_1","question":"What is 8 + 4?","reference_answer":"12"}
-{"id":"geo_1","question":"Capital of France?","reference_answer":"Paris"}
-{"id":"facts_1","question":"How many days are there in a week?","reference_answer":"7"}
+{"id":"arith_1","question":"What is 8 + 4?","reference_answer":"12","metadata":{"category":"arithmetic","difficulty":"easy"}}
+{"id":"arith_2","question":"What is 17 multiplied by 6?","reference_answer":"102","metadata":{"category":"arithmetic","difficulty":"easy"}}
+{"id":"arith_3","question":"What is 15% of 200?","reference_answer":"30","metadata":{"category":"arithmetic","difficulty":"easy"}}
+{"id":"arith_4","question":"What is the square root of 144?","reference_answer":"12","metadata":{"category":"arithmetic","difficulty":"easy"}}
+{"id":"geo_1","question":"Capital of France?","reference_answer":"Paris","metadata":{"category":"geography","difficulty":"easy"}}
+{"id":"geo_2","question":"What is the capital of Japan?","reference_answer":"Tokyo","metadata":{"category":"geography","difficulty":"easy"}}
+{"id":"geo_3","question":"Which is the longest river in the world?","reference_answer":"The Nile","metadata":{"category":"geography","difficulty":"medium"}}
+{"id":"geo_4","question":"On which continent is the Sahara Desert located?","reference_answer":"Africa","metadata":{"category":"geography","difficulty":"easy"}}
+{"id":"sci_1","question":"How many days are there in a week?","reference_answer":"7","metadata":{"category":"general","difficulty":"easy"}}
+{"id":"sci_2","question":"What is the chemical symbol for gold?","reference_answer":"Au","metadata":{"category":"science","difficulty":"easy"}}
+{"id":"sci_3","question":"What planet is closest to the Sun?","reference_answer":"Mercury","metadata":{"category":"science","difficulty":"easy"}}
+{"id":"sci_4","question":"What is the speed of light in a vacuum in km/s (approximate)?","reference_answer":"300000 km/s","metadata":{"category":"science","difficulty":"medium"}}
+{"id":"sci_5","question":"What gas do plants absorb from the atmosphere during photosynthesis?","reference_answer":"Carbon dioxide","metadata":{"category":"science","difficulty":"easy"}}
+{"id":"hist_1","question":"In what year did World War II end?","reference_answer":"1945","metadata":{"category":"history","difficulty":"easy"}}
+{"id":"hist_2","question":"Who was the first President of the United States?","reference_answer":"George Washington","metadata":{"category":"history","difficulty":"easy"}}
+{"id":"hist_3","question":"In what year did the Berlin Wall fall?","reference_answer":"1989","metadata":{"category":"history","difficulty":"medium"}}
+{"id":"hist_4","question":"Which empire built the Colosseum in Rome?","reference_answer":"The Roman Empire","metadata":{"category":"history","difficulty":"easy"}}
+{"id":"logic_1","question":"A bat and a ball together cost $1.10. The bat costs $1.00 more than the ball. How much does the ball cost?","reference_answer":"$0.05","metadata":{"category":"reasoning","difficulty":"medium"}}
+{"id":"logic_2","question":"If a lily pad doubles in size every day and covers a lake in 48 days, how many days does it take to cover half the lake?","reference_answer":"47 days","metadata":{"category":"reasoning","difficulty":"medium"}}
+{"id":"logic_3","question":"What is the next number in the sequence: 1, 4, 9, 16, 25, ?","reference_answer":"36","metadata":{"category":"pattern","difficulty":"easy"}}
+{"id":"cs_1","question":"What does CPU stand for?","reference_answer":"Central Processing Unit","metadata":{"category":"computer_science","difficulty":"easy"}}
+{"id":"cs_2","question":"What is the time complexity of binary search on a sorted array?","reference_answer":"O(log n)","metadata":{"category":"computer_science","difficulty":"medium"}}
+{"id":"cs_3","question":"In Python, what built-in function returns the length of a list?","reference_answer":"len()","metadata":{"category":"computer_science","difficulty":"easy"}}
+{"id":"econ_1","question":"What does GDP stand for?","reference_answer":"Gross Domestic Product","metadata":{"category":"economics","difficulty":"easy"}}
+{"id":"lang_1","question":"How many letters are in the English alphabet?","reference_answer":"26","metadata":{"category":"language","difficulty":"easy"}}
