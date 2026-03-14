@@ -90,7 +90,8 @@ def create_app() -> FastAPI:
             # Skip auth for dashboard, static assets, health, and WebSocket
             path = request.url.path
             public = (
-                path.startswith("/dashboard")
+                path == "/"
+                or path.startswith("/dashboard")
                 or path.startswith("/static")
                 or path == "/api/v1/health"
                 or path.startswith("/ws/")
@@ -106,6 +107,12 @@ def create_app() -> FastAPI:
         return await call_next(request)
 
     app.include_router(router, prefix="/api/v1", tags=["evaluation"])
+
+    # Landing page
+    @app.get("/", response_class=HTMLResponse, tags=["ui"])
+    async def landing():
+        html_path = STATIC_DIR / "index.html"
+        return HTMLResponse(content=html_path.read_text(), status_code=200)
 
     # Dashboard route
     @app.get("/dashboard", response_class=HTMLResponse, tags=["dashboard"])
