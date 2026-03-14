@@ -6,11 +6,12 @@ from pathlib import Path
 from app.schemas.evaluation import EvaluationCase, RunEvalRequest, RunEvalResponse
 from app.services.evaluator import EvaluatorService
 
-
 BENCHMARK_CATALOG: dict[str, dict] = {
     "mmlu_sample": {
         "name": "MMLU Sample",
-        "description": "Multiple-choice knowledge questions across science, history, economics, and CS",
+        "description": (
+            "Multiple-choice knowledge questions across science, history, economics, and CS"
+        ),
         "category": "knowledge",
     },
     "truthfulqa_sample": {

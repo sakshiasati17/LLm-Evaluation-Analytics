@@ -58,27 +58,26 @@ def _extract_mc_letter(response: str) -> str | None:
 
 # ── LLM judge prompt ──────────────────────────────────────────────────────────
 
-_JUDGE_PROMPT = """You are an impartial evaluation judge. Score the model response against the reference answer.
-
-Question: {question}
-Reference Answer: {reference}
-Model Response: {response}
-
-Score accuracy from 0 to 10:
-10 = completely correct
-7-9 = mostly correct, minor omissions
-4-6 = partially correct
-1-3 = mostly wrong
-0 = completely wrong
-
-Estimate hallucination risk 0 to 10:
-0 = strictly within reference, no unsupported claims
-5 = some unsupported additions
-10 = major fabrications or contradictions
-
-Respond with ONLY two lines:
-ACCURACY: <0-10>
-HALLUCINATION: <0-10>"""
+_JUDGE_PROMPT = (
+    "You are an impartial evaluation judge."
+    " Score the model response against the reference answer.\n\n"
+    "Question: {question}\n"
+    "Reference Answer: {reference}\n"
+    "Model Response: {response}\n\n"
+    "Score accuracy from 0 to 10:\n"
+    "10 = completely correct\n"
+    "7-9 = mostly correct, minor omissions\n"
+    "4-6 = partially correct\n"
+    "1-3 = mostly wrong\n"
+    "0 = completely wrong\n\n"
+    "Estimate hallucination risk 0 to 10:\n"
+    "0 = strictly within reference, no unsupported claims\n"
+    "5 = some unsupported additions\n"
+    "10 = major fabrications or contradictions\n\n"
+    "Respond with ONLY two lines:\n"
+    "ACCURACY: <0-10>\n"
+    "HALLUCINATION: <0-10>"
+)
 
 
 class EvaluatorService:
@@ -292,7 +291,9 @@ class EvaluatorService:
 
     # ── Cost & summary ────────────────────────────────────────────────────────
 
-    def _estimate_cost(self, model: ModelConfig, prompt_tokens: int, completion_tokens: int) -> float:
+    def _estimate_cost(
+        self, model: ModelConfig, prompt_tokens: int, completion_tokens: int
+    ) -> float:
         return max(
             0.0,
             (prompt_tokens / 1000.0) * model.pricing.prompt_per_1k

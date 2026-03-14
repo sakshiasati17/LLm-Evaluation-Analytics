@@ -8,7 +8,8 @@ class EvalGateService:
 
         if summary.avg_accuracy < thresholds.min_accuracy:
             reasons.append(
-                f"avg_accuracy {summary.avg_accuracy:.3f} is below min_accuracy {thresholds.min_accuracy:.3f}"
+                f"avg_accuracy {summary.avg_accuracy:.3f} is below "
+                f"min_accuracy {thresholds.min_accuracy:.3f}"
             )
 
         if summary.avg_hallucination_risk > thresholds.max_hallucination_risk:
@@ -18,14 +19,22 @@ class EvalGateService:
                 f"{thresholds.max_hallucination_risk:.3f}"
             )
 
-        if thresholds.max_latency_ms is not None and summary.avg_latency_ms > thresholds.max_latency_ms:
+        if (
+            thresholds.max_latency_ms is not None
+            and summary.avg_latency_ms > thresholds.max_latency_ms
+        ):
             reasons.append(
-                f"avg_latency_ms {summary.avg_latency_ms:.2f} exceeds max_latency_ms {thresholds.max_latency_ms:.2f}"
+                f"avg_latency_ms {summary.avg_latency_ms:.2f} exceeds "
+                f"max_latency_ms {thresholds.max_latency_ms:.2f}"
             )
 
-        if thresholds.max_cost_usd is not None and summary.total_cost_usd > thresholds.max_cost_usd:
+        if (
+            thresholds.max_cost_usd is not None
+            and summary.total_cost_usd > thresholds.max_cost_usd
+        ):
             reasons.append(
-                f"total_cost_usd {summary.total_cost_usd:.6f} exceeds max_cost_usd {thresholds.max_cost_usd:.6f}"
+                f"total_cost_usd {summary.total_cost_usd:.6f} exceeds "
+                f"max_cost_usd {thresholds.max_cost_usd:.6f}"
             )
 
         return EvalGateResponse(passed=not reasons, reasons=reasons, run=run)

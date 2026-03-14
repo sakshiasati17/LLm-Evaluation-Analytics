@@ -50,7 +50,9 @@ class AnthropicAdapter(BaseAdapter):
             raw = message.model_dump()
         else:
             raw = {
-                "content": [{"type": "text", "text": t} for t in text_chunks] if text_chunks else [],
+                "content": (
+                    [{"type": "text", "text": t} for t in text_chunks] if text_chunks else []
+                ),
                 "usage": {"input_tokens": prompt_tokens, "output_tokens": completion_tokens},
             }
 

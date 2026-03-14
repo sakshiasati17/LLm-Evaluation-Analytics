@@ -15,7 +15,6 @@ from app.schemas.evaluation import (
     RunEvalResponse,
     RunTaskRequest,
     RunTaskResponse,
-    TaskInfo,
     TaskListResponse,
     TaskRecommendation,
 )
@@ -73,7 +72,9 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/models")
-async def models(registry: ModelRegistry = Depends(get_registry)) -> dict[str, object]:
+async def models(
+    registry: ModelRegistry = Depends(get_registry),  # noqa: B008
+) -> dict[str, object]:
     return {"default_model": registry.get_default_model_id(), "models": registry.list_models()}
 
 
@@ -83,10 +84,13 @@ async def metrics(
     prompt_version: str | None = None,
     dataset_version: str | None = None,
     limit: int = 100,
-    analytics: AnalyticsService = Depends(get_analytics),
+    analytics: AnalyticsService = Depends(get_analytics),  # noqa: B008
 ) -> MetricsResponse:
     if limit < 1 or limit > 500:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit must be in range 1..500.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="limit must be in range 1..500.",
+        )
     return analytics.get_metrics(
         model_id=model_id,
         prompt_version=prompt_version,
@@ -100,10 +104,13 @@ async def model_comparison(
     prompt_version: str | None = None,
     dataset_version: str | None = None,
     limit: int = 400,
-    analytics: AnalyticsService = Depends(get_analytics),
+    analytics: AnalyticsService = Depends(get_analytics),  # noqa: B008
 ) -> ModelComparisonResponse:
     if limit < 1 or limit > 1000:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="limit must be in range 1..1000.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="limit must be in range 1..1000.",
+        )
     return analytics.get_model_comparison(
         prompt_version=prompt_version,
         dataset_version=dataset_version,
@@ -114,15 +121,18 @@ async def model_comparison(
 @router.post("/run-eval", response_model=RunEvalResponse)
 async def run_eval(
     payload: RunEvalRequest,
-    evaluator: EvaluatorService = Depends(get_evaluator),
-    db_store: DBStore = Depends(get_db_store),
+    evaluator: EvaluatorService = Depends(get_evaluator),  # noqa: B008
+    db_store: DBStore = Depends(get_db_store),  # noqa: B008
 ) -> RunEvalResponse:
     try:
         result = await evaluator.run_eval(payload)
         db_store.save(result)
         # Broadcast to WebSocket clients for real-time dashboard updates
         from app.main import ws_manager
-        await ws_manager.broadcast({"event": "eval_complete", "model_id": result.model_id, "run_id": result.run_id})
+
+        await ws_manager.broadcast(
+            {"event": "eval_complete", "model_id": result.model_id, "run_id": result.run_id}
+        )
         return result
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -131,12 +141,13 @@ async def run_eval(
 @router.post("/compare", response_model=CompareResponse)
 async def compare(
     payload: CompareRequest,
-    evaluator: EvaluatorService = Depends(get_evaluator),
-    db_store: DBStore = Depends(get_db_store),
+    evaluator: EvaluatorService = Depends(get_evaluator),  # noqa: B008
+    db_store: DBStore = Depends(get_db_store),  # noqa: B008
 ) -> CompareResponse:
     if not payload.model_ids:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="model_ids must contain at least one model."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="model_ids must contain at least one model.",
         )
 
     run_request = RunEvalRequest(
@@ -161,10 +172,10 @@ async def compare(
 @router.post("/eval-gate", response_model=EvalGateResponse)
 async def eval_gate(
     payload: EvalGateRequest,
-    evaluator: EvaluatorService = Depends(get_evaluator),
-    gate_service: EvalGateService = Depends(get_gate_service),
-    alert_service: AlertService = Depends(get_alert_service),
-    settings: Settings = Depends(get_settings),
+    evaluator: EvaluatorService = Depends(get_evaluator),  # noqa: B008
+    gate_service: EvalGateService = Depends(get_gate_service),  # noqa: B008
+    alert_service: AlertService = Depends(get_alert_service),  # noqa: B008
+    settings: Settings = Depends(get_settings),  # noqa: B008
 ) -> EvalGateResponse:
     run_request = RunEvalRequest(
         model_id=payload.model_id,
@@ -200,7 +211,7 @@ async def eval_gate(
 
 @router.get("/benchmarks", response_model=BenchmarkListResponse, tags=["benchmarks"])
 async def list_benchmarks(
-    bench: BenchmarkService = Depends(get_benchmark_service),
+    bench: BenchmarkService = Depends(get_benchmark_service),  # noqa: B008
 ) -> BenchmarkListResponse:
     return BenchmarkListResponse(benchmarks=bench.list_benchmarks())
 
@@ -208,8 +219,8 @@ async def list_benchmarks(
 @router.post("/benchmarks/run", response_model=RunBenchmarkResponse, tags=["benchmarks"])
 async def run_benchmark(
     payload: RunBenchmarkRequest,
-    bench: BenchmarkService = Depends(get_benchmark_service),
-    db_store: DBStore = Depends(get_db_store),
+    bench: BenchmarkService = Depends(get_benchmark_service),  # noqa: B008
+    db_store: DBStore = Depends(get_db_store),  # noqa: B008
 ) -> RunBenchmarkResponse:
     try:
         run = await bench.run_benchmark(
@@ -220,7 +231,15 @@ async def run_benchmark(
         )
         db_store.save(run)
         from app.main import ws_manager
-        await ws_manager.broadcast({"event": "benchmark_complete", "benchmark": payload.benchmark, "model_id": run.model_id, "run_id": run.run_id})
+
+        await ws_manager.broadcast(
+            {
+                "event": "benchmark_complete",
+                "benchmark": payload.benchmark,
+                "model_id": run.model_id,
+                "run_id": run.run_id,
+            }
+        )
         return RunBenchmarkResponse(benchmark=payload.benchmark, run=run)
     except (KeyError, ValueError, FileNotFoundError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -231,7 +250,7 @@ async def run_benchmark(
 
 @router.get("/tasks", response_model=TaskListResponse, tags=["tasks"])
 async def list_tasks(
-    recommender: TaskRecommender = Depends(get_task_recommender),
+    recommender: TaskRecommender = Depends(get_task_recommender),  # noqa: B008
 ) -> TaskListResponse:
     return TaskListResponse(tasks=recommender.list_tasks())
 
@@ -239,7 +258,7 @@ async def list_tasks(
 @router.get("/tasks/{task_id}/recommend", response_model=TaskRecommendation, tags=["tasks"])
 async def task_recommend(
     task_id: str,
-    recommender: TaskRecommender = Depends(get_task_recommender),
+    recommender: TaskRecommender = Depends(get_task_recommender),  # noqa: B008
 ) -> TaskRecommendation:
     try:
         rec = recommender.get_recommendations(task_id)
@@ -251,8 +270,8 @@ async def task_recommend(
 @router.post("/tasks/run", response_model=RunTaskResponse, tags=["tasks"])
 async def run_task(
     payload: RunTaskRequest,
-    recommender: TaskRecommender = Depends(get_task_recommender),
-    db_store: DBStore = Depends(get_db_store),
+    recommender: TaskRecommender = Depends(get_task_recommender),  # noqa: B008
+    db_store: DBStore = Depends(get_db_store),  # noqa: B008
 ) -> RunTaskResponse:
     try:
         task, run = await recommender.run_task_evaluation(
@@ -263,8 +282,15 @@ async def run_task(
         )
         db_store.save(run)
         from app.main import ws_manager
-        await ws_manager.broadcast({"event": "task_eval_complete", "task_id": payload.task_id, "model_id": run.model_id, "run_id": run.run_id})
+
+        await ws_manager.broadcast(
+            {
+                "event": "task_eval_complete",
+                "task_id": payload.task_id,
+                "model_id": run.model_id,
+                "run_id": run.run_id,
+            }
+        )
         return RunTaskResponse(task=task, benchmark_run=run)
     except (KeyError, ValueError, FileNotFoundError) as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-

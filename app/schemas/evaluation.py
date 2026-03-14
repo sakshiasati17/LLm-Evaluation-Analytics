@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 class EvaluationCase(BaseModel):
     id: str = Field(description="Unique case identifier within a run.")
     question: str = Field(description="Prompt/question to send to the model.")
-    reference_answer: str | None = Field(default=None, description="Ground-truth answer if available.")
+    reference_answer: str | None = Field(
+        default=None, description="Ground-truth answer if available."
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -32,7 +34,9 @@ class CaseScore(BaseModel):
         default="heuristic",
         description="'llm_judge' | 'exact_match' | 'heuristic'",
     )
-    judge_model: str | None = Field(default=None, description="Model used as LLM judge, if applicable")
+    judge_model: str | None = Field(
+        default=None, description="Model used as LLM judge, if applicable"
+    )
 
 
 class CaseResult(BaseModel):
@@ -165,7 +169,9 @@ class BenchmarkListResponse(BaseModel):
 
 class RunBenchmarkRequest(BaseModel):
     benchmark: str = Field(description="Benchmark name, e.g. 'mmlu_sample'")
-    model_id: str | None = Field(default=None, description="Model to evaluate. Defaults to default model.")
+    model_id: str | None = Field(
+        default=None, description="Model to evaluate. Defaults to default model."
+    )
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     max_tokens: int = Field(default=512, ge=1, le=4096)
 
@@ -196,7 +202,9 @@ class TaskRecommendation(BaseModel):
 
 class RunTaskRequest(BaseModel):
     task_id: str = Field(description="Task category ID, e.g. 'reasoning'")
-    model_id: str | None = Field(default=None, description="Override model. Uses first recommended if omitted.")
+    model_id: str | None = Field(
+        default=None, description="Override model. Uses first recommended if omitted."
+    )
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     max_tokens: int = Field(default=512, ge=1, le=4096)
 
