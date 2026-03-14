@@ -5,11 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SentinelAI — LLM Evaluation Dashboard</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%235b8def'/><text x='50' y='68' font-size='55' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>S</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
     <style>
         *,
         *::before,
@@ -20,37 +24,43 @@
         }
 
         :root {
-            --bg-0: #09090b;
-            --bg-1: #18181b;
-            --bg-2: #27272a;
-            --bg-3: #3f3f46;
-            --border: #27272a;
-            --border-hover: #3f3f46;
-            --text-0: #fafafa;
-            --text-1: #a1a1aa;
-            --text-2: #71717a;
-            --accent: #3b82f6;
-            --accent-dim: rgba(59, 130, 246, 0.12);
-            --green: #22c55e;
-            --green-dim: rgba(34, 197, 94, 0.12);
-            --red: #ef4444;
-            --red-dim: rgba(239, 68, 68, 0.12);
-            --amber: #f59e0b;
-            --amber-dim: rgba(245, 158, 11, 0.12);
+            --bg-0: #0f1117;
+            --bg-1: #1a1d27;
+            --bg-2: #242836;
+            --bg-3: #2f3447;
+            --bg-card: #1e2231;
+            --bg-elevated: #252a3a;
+            --border: #2a2f40;
+            --border-hover: #3d4359;
+            --text-0: #f1f3f8;
+            --text-1: #9ba3b8;
+            --text-2: #6b7394;
+            --accent: #5b8def;
+            --accent-dim: rgba(91, 141, 239, 0.12);
+            --green: #34d399;
+            --green-dim: rgba(52, 211, 153, 0.10);
+            --red: #f87171;
+            --red-dim: rgba(248, 113, 113, 0.10);
+            --amber: #fbbf24;
+            --amber-dim: rgba(251, 191, 36, 0.10);
             --purple: #a78bfa;
             --cyan: #22d3ee;
+            --surface-glow: rgba(91, 141, 239, 0.03);
         }
 
         [data-theme="light"] {
-            --bg-0: #fafafa;
+            --bg-0: #f5f6fa;
             --bg-1: #ffffff;
-            --bg-2: #f4f4f5;
-            --bg-3: #e4e4e7;
-            --border: #e4e4e7;
-            --border-hover: #d4d4d8;
-            --text-0: #09090b;
-            --text-1: #52525b;
-            --text-2: #a1a1aa;
+            --bg-2: #eef0f6;
+            --bg-3: #dde1ec;
+            --bg-card: #ffffff;
+            --bg-elevated: #f8f9fc;
+            --border: #dde1ec;
+            --border-hover: #c5cad9;
+            --text-0: #111827;
+            --text-1: #4b5563;
+            --text-2: #9ca3af;
+            --surface-glow: rgba(91, 141, 239, 0.04);
         }
 
         body {
@@ -59,7 +69,8 @@
             color: var(--text-0);
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
-            transition: background 0.2s, color 0.2s;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background 0.3s, color 0.3s;
         }
 
         /* ── Sidebar ── */
@@ -70,7 +81,7 @@
 
         .sidebar {
             width: 240px;
-            background: var(--bg-1);
+            background: var(--bg-card);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
@@ -80,7 +91,7 @@
             left: 0;
             bottom: 0;
             z-index: 10;
-            transition: background 0.2s;
+            transition: background 0.3s;
         }
 
         .sidebar-brand {
@@ -240,12 +251,13 @@
 
         /* ── Live Eval ── */
         .eval-panel {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 20px 24px;
             margin-bottom: 24px;
-            transition: background 0.2s;
+            transition: background 0.3s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .eval-header {
@@ -476,16 +488,20 @@
         }
 
         .kpi {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px 20px;
-            transition: all 0.15s;
+            border-radius: 10px;
+            padding: 18px 22px;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .kpi:hover {
-            border-color: var(--border-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
+
 
         .kpi-label {
             font-size: 11px;
@@ -522,15 +538,17 @@
         }
 
         .chart-box {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 20px;
-            transition: border-color 0.15s;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .chart-box:hover {
             border-color: var(--border-hover);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .chart-header {
@@ -592,15 +610,18 @@
         }
 
         .model-card {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 18px 20px;
-            transition: all 0.15s;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .model-card:hover {
             border-color: var(--border-hover);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
         }
 
         .mc-header {
@@ -697,10 +718,11 @@
 
         /* ── Table ── */
         .data-table {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .data-table table {
@@ -717,7 +739,7 @@
             letter-spacing: 0.8px;
             color: var(--text-2);
             border-bottom: 1px solid var(--border);
-            background: var(--bg-1);
+            background: var(--bg-elevated);
         }
 
         .data-table td {
@@ -753,14 +775,15 @@
         }
 
         .toast-msg {
-            background: var(--bg-1);
+            background: var(--bg-elevated);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px 16px;
             font-size: 12px;
-            color: var(--text-1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            color: var(--text-0);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
             animation: slideIn 0.3s ease, slideOut 0.3s ease 3.5s forwards;
+            backdrop-filter: blur(8px);
         }
 
         @keyframes slideIn {
@@ -816,11 +839,12 @@
 
         /* ── Quality Gates ── */
         .gate-panel {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .gate-grid {
@@ -877,11 +901,12 @@
 
         /* ── Diff View ── */
         .diff-panel {
-            background: var(--bg-1);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .diff-header {
@@ -969,6 +994,53 @@
 
         .ws-disconnected {
             background: var(--red);
+        }
+
+        /* ── Collapsible Section ── */
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            padding: 4px 0;
+        }
+
+        .collapsible-header:hover .collapse-icon {
+            color: var(--text-0);
+        }
+
+        .collapse-icon {
+            font-size: 11px;
+            color: var(--text-2);
+            transition: transform 0.25s ease, color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .collapse-icon svg {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.25s ease;
+        }
+
+        .collapsible-header.collapsed .collapse-icon svg {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-body {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .collapsible-body.collapsed {
+            max-height: 0;
+            opacity: 0;
         }
 
         /* ── Responsive ── */
@@ -1209,11 +1281,23 @@
 
             <!-- Evaluation Timeline -->
             <div class="section-label" id="sec-timeline">Evaluation Timeline</div>
-            <div class="chart-box" style="margin-bottom:16px">
+            <div class="chart-box" style="margin-bottom:16px;position:relative">
                 <div class="chart-header">
                     <h3>Accuracy Over Time (Drift Monitoring)</h3>
                 </div>
-                <div class="chart-wrap chart-lg"><canvas id="chTimeline"></canvas></div>
+                <div class="chart-wrap chart-lg" style="position:relative">
+                    <canvas id="chTimeline"></canvas>
+                    <div id="timelineEmpty"
+                        style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--text-2);display:none">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                        </svg>
+                        <span style="font-size:13px;font-weight:500">No timeline data yet</span>
+                        <span style="font-size:11px">Run evaluations across multiple models to see accuracy trends over
+                            time</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Quality Gates -->
@@ -1246,46 +1330,6 @@
             <!-- Model Cards -->
             <div class="section-label" id="sec-scorecards">Model Scorecards</div>
             <div class="model-grid" id="modelGrid"></div>
-
-            <!-- Table -->
-            <div class="section-label" id="sec-history">Run History</div>
-            <div class="data-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>Version</th>
-                            <th>Cases</th>
-                            <th>Accuracy</th>
-                            <th>Hallucination</th>
-                            <th>Latency</th>
-                            <th>Cost</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tBody">
-                        <tr>
-                            <td colspan="8" style="text-align:center;padding:32px;color:var(--text-2)">Loading…</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Diff View -->
-            <div class="section-label" id="sec-diff">Evaluation Diff View</div>
-            <div class="diff-panel">
-                <div class="diff-header">
-                    <select class="diff-select" id="diffRunA">
-                        <option value="">Select Run A...</option>
-                    </select>
-                    <span style="color:var(--text-2);font-size:12px">vs</span>
-                    <select class="diff-select" id="diffRunB">
-                        <option value="">Select Run B...</option>
-                    </select>
-                    <button class="diff-compare-btn" onclick="compareDiff()">Compare</button>
-                </div>
-                <div id="diffResult"></div>
-            </div>
 
             <!-- Benchmarks -->
             <div class="section-label" id="sec-benchmarks">Benchmarks</div>
@@ -1331,7 +1375,58 @@
                     <div id="taskSummary" style="margin-top:12px"></div>
                 </div>
             </div>
+
+            <!-- Diff View -->
+            <div class="section-label" id="sec-diff">Evaluation Diff View</div>
+            <div class="diff-panel">
+                <div class="diff-header">
+                    <select class="diff-select" id="diffRunA">
+                        <option value="">Select Run A...</option>
+                    </select>
+                    <span style="color:var(--text-2);font-size:12px">vs</span>
+                    <select class="diff-select" id="diffRunB">
+                        <option value="">Select Run B...</option>
+                    </select>
+                    <button class="diff-compare-btn" onclick="compareDiff()">Compare</button>
+                </div>
+                <div id="diffResult"></div>
+            </div>
+
+            <!-- Run History (Collapsible) -->
+            <div class="collapsible-header" id="sec-history" onclick="toggleCollapse('historyCollapse', this)">
+                <div class="section-label" style="margin:0;cursor:pointer">Run History</div>
+                <span class="collapse-icon">
+                    <span>Show / Hide</span>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </span>
+            </div>
+            <div class="collapsible-body" id="historyCollapse">
+                <div class="data-table" style="margin-top:12px">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Version</th>
+                                <th>Cases</th>
+                                <th>Accuracy</th>
+                                <th>Hallucination</th>
+                                <th>Latency</th>
+                                <th>Cost</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;padding:32px;color:var(--text-2)">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+    </div>
     </div>
 
     <div class="toasts" id="toasts"></div>
@@ -1888,9 +1983,39 @@
             a.click(); toast('CSV exported');
         }
 
-        function exportPDF() {
-            toast('Generating PDF...');
-            window.print();
+        async function exportPDF() {
+            toast('Generating PDF report...');
+            try {
+                const content = document.querySelector('.content');
+                const canvas = await html2canvas(content, {
+                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-0').trim(),
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const imgW = pageW - 20;
+                const imgH = (canvas.height * imgW) / canvas.width;
+                let heightLeft = imgH;
+                let position = 10;
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, position, imgW, imgH);
+                heightLeft -= (pageH - 20);
+                while (heightLeft > 0) {
+                    position = heightLeft - imgH + 10;
+                    pdf.addPage();
+                    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, position, imgW, imgH);
+                    heightLeft -= (pageH - 20);
+                }
+                pdf.save(`sentinelai_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+                toast('PDF exported successfully');
+            } catch (e) {
+                console.error('PDF export error:', e);
+                toast('PDF export failed, using print fallback...');
+                window.print();
+            }
         }
 
         // ── Quality Gates ──
@@ -1921,6 +2046,7 @@
         function mkTimeline(items) {
             if (charts.chTimeline) charts.chTimeline.destroy();
             const s = getChartStyles();
+            const emptyEl = document.getElementById('timelineEmpty');
             // Group by model
             const byModel = {};
             items.forEach(item => {
@@ -1936,6 +2062,12 @@
                 borderWidth: 2, tension: 0.3, fill: false,
                 pointBackgroundColor: clr(mid), pointRadius: 4, pointHoverRadius: 6
             }));
+            // Show/hide empty state
+            if (datasets.length === 0) {
+                if (emptyEl) emptyEl.style.display = 'flex';
+                return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
             charts.chTimeline = new Chart(document.getElementById('chTimeline'), {
                 type: 'line',
                 data: { datasets },
@@ -2145,16 +2277,21 @@
 
         async function runTaskEval(taskId) {
             const grid = document.getElementById('taskGrid');
-            // Show loading state on clicked card
+            // Use the selected eval model as fallback if available
+            const evalModel = document.getElementById('evalModel')?.value || 'mock-local';
             grid.querySelectorAll('.model-card').forEach(c => c.style.opacity = '0.5');
-            toast(`Running ${taskId} benchmark with recommended model...`);
+            toast(`Running ${taskId} benchmark...`);
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
                 const r = await fetch('/api/v1/tasks/run', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ task_id: taskId })
+                    body: JSON.stringify({ task_id: taskId, model_id: evalModel }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
                 const data = await r.json();
                 const run = data.benchmark_run;
@@ -2193,7 +2330,11 @@
                 toast(`${data.task.name}: ${(run.summary.avg_accuracy * 100).toFixed(0)}% on ${run.model_id}`);
                 await loadData();
             } catch (e) {
-                toast('Error: ' + e.message);
+                if (e.name === 'AbortError') {
+                    toast('Task evaluation timed out — try selecting a different model');
+                } else {
+                    toast('Error: ' + e.message);
+                }
             } finally {
                 grid.querySelectorAll('.model-card').forEach(c => c.style.opacity = '1');
             }
@@ -2229,6 +2370,13 @@
                 setTimeout(connectWS, 3000); // Auto-reconnect
             };
             ws.onerror = () => ws.close();
+        }
+
+        // ── Collapsible Toggle ──
+        function toggleCollapse(bodyId, headerEl) {
+            const body = document.getElementById(bodyId);
+            body.classList.toggle('collapsed');
+            headerEl.classList.toggle('collapsed');
         }
 
         // ── Init ──

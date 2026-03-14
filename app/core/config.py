@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     cohere_api_key: str | None = Field(default=None, alias="COHERE_API_KEY")
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")
 
+    platform_api_key: str | None = Field(default=None, alias="PLATFORM_API_KEY")
+
     database_url: str | None = Field(default=None, alias="DATABASE_URL")
 
     run_artifact_dir: str = Field(default="artifacts/runs", alias="RUN_ARTIFACT_DIR")
